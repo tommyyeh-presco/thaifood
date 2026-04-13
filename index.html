@@ -831,58 +831,67 @@ function updateActiveNav() {
 
 window.addEventListener('scroll', updateActiveNav, { passive: true });
 
-// Build order summary text
-function buildOrderText() {
-  const lines = ['Thai & Thai \u8A02\u55AE\n'];
+// Build structured order data for Flex Message
+function buildOrderData() {
+  const categories = [];
   let total = 0;
   let hasMarketPrice = false;
 
   MENU_DATA.forEach(cat => {
-    const catItems = [];
+    const items = [];
 
     cat.items.forEach((item, idx) => {
       const key = `${cat.id}-${idx}`;
       const sel = state.selections[key];
       if (!sel) return;
 
-      // Build short English name (first few words)
-      const shortEn = item.en.split(' ').slice(0, 4).join(' ');
-      let line = `\u2022 ${item.zh} ${shortEn}`;
-
-      // Options
       const optParts = [];
-      if (sel.size) {
-        optParts.push(sel.size);
-      }
+      if (sel.size) optParts.push(sel.size);
       Object.values(sel.options).forEach(v => optParts.push(v));
-      if (optParts.length) line += ` (${optParts.join(', ')})`;
 
-      if (sel.qty > 1) line += ` x${sel.qty}`;
+      const orderItem = {
+        zh: item.zh,
+        en: item.en,
+        options: optParts.length ? optParts.join(', ') : '',
+        qty: sel.qty,
+        marketPrice: !!item.marketPrice,
+        subtotal: item.marketPrice ? 0 : sel.effectivePrice * sel.qty,
+      };
 
-      if (item.marketPrice) {
-        line += ' - \u6642\u50F9';
-        hasMarketPrice = true;
-      } else {
-        const subtotal = sel.effectivePrice * sel.qty;
-        line += ` - $${subtotal.toLocaleString()}`;
-        total += subtotal;
-      }
+      if (item.marketPrice) hasMarketPrice = true;
+      else total += orderItem.subtotal;
 
-      catItems.push(line);
+      items.push(orderItem);
     });
 
-    if (catItems.length) {
-      lines.push(`\u3010${cat.zh} ${cat.en}\u3011`);
-      catItems.forEach(l => lines.push(l));
-      lines.push('');
+    if (items.length) {
+      categories.push({ zh: cat.zh, en: cat.en, items });
     }
   });
 
-  lines.push(`\u5C0F\u8A08 Subtotal\uFF1A$${total.toLocaleString()}`);
-  if (hasMarketPrice) {
-    lines.push('(\u6642\u50F9\u54C1\u9805\u53E6\u8A08)');
-  }
-  lines.push('(\u53E6\u52A010%\u670D\u52D9\u8CBB +10% service charge)');
+  return { categories, total, hasMarketPrice };
+}
+
+// Build plain text fallback
+function buildOrderText() {
+  const data = buildOrderData();
+  const lines = ['Thai & Thai 以點選菜品\n'];
+
+  data.categories.forEach(cat => {
+    lines.push(`【${cat.zh} ${cat.en}】`);
+    cat.items.forEach(item => {
+      let line = `• ${item.zh}`;
+      if (item.options) line += ` (${item.options})`;
+      if (item.qty > 1) line += ` x${item.qty}`;
+      line += item.marketPrice ? ' - 時價' : ` - $${item.subtotal.toLocaleString()}`;
+      lines.push(line);
+    });
+    lines.push('');
+  });
+
+  lines.push(`小計：$${data.total.toLocaleString()}`);
+  if (data.hasMarketPrice) lines.push('(時價品項另計)');
+  lines.push('(另加10%服務費)');
 
   return lines.join('\n');
 }
@@ -915,6 +924,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = '送出中...';
 
+  const orderData = buildOrderData();
   const orderText = buildOrderText();
   // Prefer gid from URL (real Messaging API group ID from webhook), fall back to LIFF context
   const urlParams = new URLSearchParams(window.location.search);
@@ -922,12 +932,12 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   const userName = userProfile?.displayName || '';
 
   if (groupId && API_URL !== 'API_GATEWAY_URL_PLACEHOLDER') {
-    // Send via backend → LINE OA pushes the message
+    // Send via backend → LINE OA pushes the message as Flex Message
     try {
       const res = await fetch(API_URL + '/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId, orderText, userName }),
+        body: JSON.stringify({ groupId, orderData, orderText, userName }),
       });
 
       if (!res.ok) throw new Error('API error');
