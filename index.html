@@ -833,7 +833,7 @@ window.addEventListener('scroll', updateActiveNav, { passive: true });
 
 // Build order summary text
 function buildOrderText() {
-  const lines = ['\u{1F37D} Thai & Thai \u8A02\u55AE\n'];
+  const lines = ['Thai & Thai \u8A02\u55AE\n'];
   let total = 0;
   let hasMarketPrice = false;
 
@@ -878,7 +878,7 @@ function buildOrderText() {
     }
   });
 
-  lines.push(`\u{1F4B0} \u5C0F\u8A08 Subtotal\uFF1A$${total.toLocaleString()}`);
+  lines.push(`\u5C0F\u8A08 Subtotal\uFF1A$${total.toLocaleString()}`);
   if (hasMarketPrice) {
     lines.push('(\u6642\u50F9\u54C1\u9805\u53E6\u8A08)');
   }
