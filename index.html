@@ -885,34 +885,74 @@ function buildOrderText() {
 }
 
 // LIFF init and submit
+const API_URL = 'https://8peh4lj1k6.execute-api.us-east-1.amazonaws.com';
+let liffContext = null;
+let userProfile = null;
+
 async function initLiff() {
   try {
-    await liff.init({ liffId: '2009781079-2Xq4KZ5N' }); // Thai & Thai Menu LIFF
+    await liff.init({ liffId: '2009781079-2Xq4KZ5N' });
+
+    // Get chat context (groupId) and user profile
+    if (liff.isInClient()) {
+      liffContext = liff.getContext();
+      try {
+        userProfile = await liff.getProfile();
+      } catch (e) {
+        console.log('Could not get profile:', e);
+      }
+    }
   } catch (e) {
     console.log('LIFF init failed, running in standalone mode');
   }
 }
 
 document.getElementById('submitBtn').addEventListener('click', async () => {
-  const orderText = buildOrderText();
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '送出中...';
 
-  if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
+  const orderText = buildOrderText();
+  const groupId = liffContext?.groupId || liffContext?.roomId;
+  const userName = userProfile?.displayName || '';
+
+  if (groupId && API_URL !== 'API_GATEWAY_URL_PLACEHOLDER') {
+    // Send via backend → LINE OA pushes the message
     try {
-      await liff.sendMessages([{ type: 'text', text: orderText }]);
-      liff.closeWindow();
+      const res = await fetch(API_URL + '/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId, orderText, userName }),
+      });
+
+      if (!res.ok) throw new Error('API error');
+
+      // Success — close LIFF window
+      if (liff.isInClient()) {
+        liff.closeWindow();
+      } else {
+        alert('訂單已送出！Order sent!');
+        btn.textContent = '確認餐點';
+        btn.disabled = false;
+      }
     } catch (e) {
+      console.error('API submit failed:', e);
       fallbackSubmit(orderText);
+      btn.textContent = '確認餐點';
+      btn.disabled = false;
     }
   } else {
     fallbackSubmit(orderText);
+    btn.textContent = '確認餐點';
+    btn.disabled = false;
   }
 });
 
 function fallbackSubmit(text) {
   navigator.clipboard.writeText(text).then(() => {
-    alert('\u8A02\u55AE\u5DF2\u8907\u88FD\u5230\u526A\u8CBC\u7C3F\uFF01\nOrder copied to clipboard!\n\n\u8ACB\u8CBC\u4E0A\u50B3\u9001\u7D66\u5C0D\u65B9\u3002');
+    alert('訂單已複製到剪貼簿！\nOrder copied to clipboard!\n\n請貼上傳送給對方。');
   }).catch(() => {
-    prompt('\u8ACB\u8907\u88FD\u4EE5\u4E0B\u8A02\u55AE\u5167\u5BB9\uFF1A', text);
+    prompt('請複製以下訂單內容：', text);
   });
 }
 
