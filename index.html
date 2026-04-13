@@ -916,7 +916,9 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   btn.textContent = '送出中...';
 
   const orderText = buildOrderText();
-  const groupId = liffContext?.groupId || liffContext?.roomId;
+  // Prefer gid from URL (real Messaging API group ID from webhook), fall back to LIFF context
+  const urlParams = new URLSearchParams(window.location.search);
+  const groupId = urlParams.get('gid') || liffContext?.groupId || liffContext?.roomId;
   const userName = userProfile?.displayName || '';
 
   if (groupId && API_URL !== 'API_GATEWAY_URL_PLACEHOLDER') {
