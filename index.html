@@ -919,15 +919,6 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   const groupId = liffContext?.groupId || liffContext?.roomId;
   const userName = userProfile?.displayName || '';
 
-  // DEBUG: show context info (remove after testing)
-  const debugInfo = {
-    isInClient: typeof liff !== 'undefined' && liff.isInClient ? liff.isInClient() : 'N/A',
-    contextType: liffContext?.type || 'null',
-    groupId: groupId || 'null',
-    fullContext: JSON.stringify(liffContext),
-  };
-  alert('DEBUG:\n' + JSON.stringify(debugInfo, null, 2));
-
   if (groupId && API_URL !== 'API_GATEWAY_URL_PLACEHOLDER') {
     // Send via backend → LINE OA pushes the message
     try {
