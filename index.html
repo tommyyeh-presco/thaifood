@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Thai & Thai 單點菜單</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --gold: #9b7b4f;
+      --gold-light: #c4a87a;
+      --gold-dark: #7a5f3a;
+      --gold-bg: #faf6f0;
+      --bg: #fff;
+      --text: #2d2820;
+      --text-light: #8a7e72;
+      --border: #e8e0d4;
+      --selected-bg: #fdf8f0;
+      --accent: #c4710a;
+      --preorder: #b85c2f;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background: var(--gold-bg);
+      color: var(--text);
+      padding-bottom: 100px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      background: linear-gradient(135deg, #2a1e14 0%, #3d2b1f 40%, #4a3428 100%);
+      color: var(--gold-light);
+      padding: 24px 16px 18px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    }
+
+    header h1 {
+      font-size: 24px;
+      letter-spacing: 3px;
+      margin-bottom: 4px;
+      font-weight: 300;
+    }
+
+    header h1 span {
+      font-weight: 700;
+    }
+
+    header p {
+      font-size: 11px;
+      letter-spacing: 2px;
+      opacity: 0.65;
+      text-transform: uppercase;
+    }
+
+    .category-nav {
+      display: flex;
+      overflow-x: auto;
+      gap: 8px;
+      padding: 10px 16px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 70px;
+      z-index: 99;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .category-nav::-webkit-scrollbar { display: none; }
+
+    .category-nav button {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: #fff;
+      color: var(--text-light);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .category-nav button.active {
+      background: var(--gold);
+      color: #fff;
+      border-color: var(--gold);
+    }
+
+    .category {
+      margin: 12px 12px 0;
+    }
+
+    .category-title {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 14px 4px 8px;
+      border-bottom: 2px solid var(--gold);
+      margin-bottom: 8px;
+    }
+
+    .category-title h2 {
+      font-size: 20px;
+      color: var(--gold-dark);
+    }
+
+    .category-title span {
+      font-size: 13px;
+      color: var(--text-light);
+      letter-spacing: 0.5px;
+    }
+
+    .category-note {
+      font-size: 11px;
+      color: var(--accent);
+      padding: 0 4px 8px;
+      font-style: italic;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 10px;
+      border-radius: 10px;
+      margin-bottom: 2px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .menu-item:active {
+      transform: scale(0.99);
+    }
+
+    .menu-item.selected {
+      background: var(--selected-bg);
+      box-shadow: inset 0 0 0 1.5px var(--gold-light);
+    }
+
+    .menu-item input[type="checkbox"] {
+      display: none;
+    }
+
+    .check-box {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #c8c0b4;
+      border-radius: 6px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      margin-right: 10px;
+    }
+
+    .menu-item.selected .check-box {
+      background: var(--gold);
+      border-color: var(--gold);
+    }
+
+    .check-box::after {
+      content: '';
+      display: none;
+      width: 6px;
+      height: 10px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+      margin-top: -2px;
+    }
+
+    .menu-item.selected .check-box::after {
+      display: block;
+    }
+
+    .item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .item-name-zh {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .item-name-en {
+      font-size: 11px;
+      color: var(--text-light);
+      line-height: 1.3;
+    }
+
+    .preorder-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--preorder);
+      background: rgba(184, 92, 47, 0.1);
+      border: 1px solid rgba(184, 92, 47, 0.3);
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-left: 4px;
+      vertical-align: middle;
+      letter-spacing: 0.5px;
+    }
+
+    .item-price {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gold-dark);
+      flex-shrink: 0;
+      margin-left: 8px;
+      white-space: nowrap;
+    }
+
+    .qty-control {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+
+    .menu-item.selected .qty-control {
+      display: flex;
+    }
+
+    .qty-control button {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1.5px solid var(--gold);
+      background: #fff;
+      color: var(--gold);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      transition: all 0.15s;
+    }
+
+    .qty-control button:active {
+      background: var(--gold);
+      color: #fff;
+    }
+
+    .qty-control .qty-num {
+      font-size: 15px;
+      font-weight: 600;
+      min-width: 22px;
+      text-align: center;
+    }
+
+    .item-options {
+      display: none;
+      padding: 8px 0 4px 32px;
+      animation: slideDown 0.2s ease;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .menu-item.selected + .item-options {
+      display: block;
+    }
+
+    .option-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+      align-items: center;
+    }
+
+    .option-group label {
+      font-size: 11px;
+      color: var(--text-light);
+      margin-right: 2px;
+    }
+
+    .option-pill {
+      padding: 5px 12px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: #fff;
+      user-select: none;
+    }
+
+    .option-pill:active {
+      transform: scale(0.95);
+    }
+
+    .option-pill.active {
+      background: var(--gold);
+      color: #fff;
+      border-color: var(--gold);
+    }
+
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 200;
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+    }
+
+    .bottom-bar .summary {
+      font-size: 13px;
+    }
+
+    .bottom-bar .summary .total {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--gold-dark);
+    }
+
+    .bottom-bar .summary .count {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    .submit-btn {
+      padding: 12px 28px;
+      border: none;
+      border-radius: 25px;
+      background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-light) 100%);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(155, 123, 79, 0.3);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .submit-btn:active:not(:disabled) {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
+
+    .note-text {
+      text-align: center;
+      padding: 16px 16px 8px;
+      font-size: 11px;
+      color: var(--text-light);
+      line-height: 1.6;
+    }
+
+    .search-wrap {
+      padding: 10px 12px;
+      background: #fff;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+      background: var(--gold-bg);
+      transition: border-color 0.2s;
+    }
+
+    .search-wrap input:focus {
+      border-color: var(--gold);
+      background: #fff;
+    }
+
+    .hidden { display: none !important; }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 4px;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1><span>Thai</span> & <span>Thai</span></h1>
+  <p>單點菜單 A La Carte Menu</p>
+</header>
+
+<div class="search-wrap">
+  <input type="text" id="searchInput" placeholder="搜尋菜名 Search...">
+</div>
+
+<nav class="category-nav" id="categoryNav"></nav>
+
+<main id="menuContainer"></main>
+
+<p class="note-text">
+  價格含5%營業稅，另加收10%服務費<br>
+  Prices include 5% VAT, subject to 10% service charge
+</p>
+
+<div class="bottom-bar">
+  <div class="summary">
+    <div class="count" id="itemCount">已選 0 項</div>
+    <div class="total">$<span id="totalPrice">0</span></div>
+  </div>
+  <button class="submit-btn" id="submitBtn" disabled>確認餐點</button>
+</div>
+
+<script>
+const MENU_DATA = [
+  {
+    id: "appetizers",
+    zh: "開胃菜",
+    en: "Appetizers",
+    items: [
+      { zh: "瀑布牛", en: "Tossed Rib-eye Slice with Spice and Sour Sauce", price: 980 },
+      { zh: "瀑布豬", en: "Tossed Pork with Spice and Sour Sauce", price: 680 },
+      { zh: "七葉蘭燒雞 (5顆)", en: "Pandan Chicken (5pcs)", price: 680 },
+      { zh: "泰式傳統魚餅 (6顆)", en: "Fried Fish Cake (6pcs)", price: 620 },
+      { zh: "金錢蝦餅 (6顆)", en: "Deep-fried Minced Shrimp Cake (6pcs)", price: 620 },
+      { zh: "月亮蝦餅 (6片)", en: "Thai Shrimp Pancake (6pcs)", price: 620 },
+      { zh: "大珠小珠落玉盤 (10顆)", en: "Sago Pork Balls (10pcs)", price: 480 },
+    ]
+  },
+  {
+    id: "salad",
+    zh: "沙拉",
+    en: "Salad",
+    items: [
+      { zh: "墨西哥車輪鮑沙拉", en: "CALMEX Abalone Salad", price: 3800 },
+      { zh: "炸魚沙拉", en: "Spicy Fried Fish Salad", price: 980 },
+      { zh: "碳烤明蝦青木瓜沙拉", en: "Green Papaya Salad with Grilled Prawn", price: 880 },
+      { zh: "炙燒鮭魚沙拉", en: "Spicy Grilled Salmon Salad with Lemongrass", price: 680 },
+      { zh: "泰式海鮮沙拉", en: "Thai Style Seafood Salad", price: 680 },
+      { zh: "涼拌生蝦", en: "Raw Shrimp with Fish Sauce", price: 680 },
+      { zh: "炸蛋沙拉", en: "Deep-fried Egg Salad with Shrimps and Pork", price: 580 },
+      { zh: "青木瓜沙拉", en: "Green Papaya Salad", price: 480 },
+    ]
+  },
+  {
+    id: "grilled",
+    zh: "烤",
+    en: "Grilled",
+    note: "預訂菜請提前三天預訂 Pre-order items require 3 days advance notice",
+    items: [
+      { zh: "碳烤日本上蓋和牛", en: "Grilled Top Cap Wagyu", price: 6000 },
+      { zh: "泰式烤鴨三吃 (預訂)", en: "Thai Roasted Duck - Three Ways (Pre-order)", price: 3200, preorder: true },
+      { zh: "泰式烤鴨二吃 (預訂)", en: "Thai Roasted Duck - Two Ways (Pre-order)", price: 2800, preorder: true },
+      { zh: "泰式脆皮鴨 (預訂)", en: "Thai Roasted Duck (Pre-order)", price: 1800, preorder: true },
+      { zh: "泰式香烤雞 (預訂)", en: "Thai Grilled Chicken (Pre-order)", price: 1380, preorder: true },
+      { zh: "碳烤美國牛肋眼", en: "Grilled U.S. Prime Rib-eye Beef", price: 980 },
+      { zh: "碳烤豬里肌", en: "Grilled Pork Loin", price: 600 },
+      { zh: "泰式傳統沙嗲 (豬/雞)(6串)", en: "Traditional Thai Style Satay (Pork/Chicken)(6pcs)", price: 560, options: { protein: ["豬 Pork", "雞 Chicken"] } },
+    ]
+  },
+  {
+    id: "curry",
+    zh: "咖哩",
+    en: "Curry",
+    note: "小份為1人份 / 大份為3-4人份",
+    items: [
+      { zh: "古法綠咖哩", en: "Thai Green Curry", price: 380, hasSize: true, options: { protein: ["雞 Chicken", "牛 Beef", "豬 Pork", "蝦 Shrimps"] } },
+      { zh: "傳統紅咖哩", en: "Thai Red Curry", price: 380, hasSize: true, options: { protein: ["雞 Chicken", "牛 Beef", "豬 Pork", "蝦 Shrimps"] } },
+      { zh: "印度瑪莎曼咖哩", en: "Massaman Curry", price: 380, hasSize: true, options: { protein: ["雞 Chicken", "牛 Beef"] } },
+      { zh: "泰黃咖哩", en: "Thai Yellow Curry", price: 380, hasSize: true, options: { protein: ["雞 Chicken", "牛 Beef"] } },
+    ]
+  },
+  {
+    id: "claypot",
+    zh: "煲",
+    en: "Clay Pot",
+    items: [
+      { zh: "沙公粉絲煲", en: "Braised Giant Mud Crab with Glass Noodles", price: 3880 },
+      { zh: "紅蟳粉絲煲", en: "Braised Mud Crab with Glass Noodles", price: 1880 },
+      { zh: "鮮蝦粉絲煲 (4隻)", en: "Braised Prawns with Glass Noodles (4pcs)", price: 1450 },
+      { zh: "鵝掌蛋麵煲 (4隻)", en: "Braised Goose Web and Egg Noodles (4pcs)", price: 1280 },
+    ]
+  },
+  {
+    id: "fish",
+    zh: "鮮魚",
+    en: "Fresh Fish",
+    items: [
+      { zh: "每日鮮魚", en: "Daily Fresh Fish", price: 0, marketPrice: true, options: { cooking: ["清蒸香辣檸檬 Steamed Spicy Lime", "醃酸梅 Pickled Plums", "蒸豆豉 Salty Black Beans", "蒸泰式醬油 Thai Soy Sauce", "烤豆豉 Grilled Black Beans"] } },
+      { zh: "鹽烤鱸魚", en: "Grilled Sea Bass in Salt", price: 1080 },
+      { zh: "香辣檸檬鱸魚", en: "Steamed Sea Bass with Spicy Lime Sauce", price: 900 },
+      { zh: "三味鱸魚", en: "Deep-fried Sea Bass with Sweet and Sour Chili Sauce", price: 900 },
+    ]
+  },
+  {
+    id: "stirfried",
+    zh: "熱炒",
+    en: "Stir-fried",
+    items: [
+      { zh: "北海道鱈場蟹", en: "Hokkaido King Crab", price: 0, marketPrice: true, options: { cooking: ["醃酸梅 Pickled Plums", "辣椒膏 Chili Paste", "炒咖哩 Curry", "打拋 Thai Holy Basil"] } },
+      { zh: "椰香海龍王", en: "Stir-fried Mixed Seafood", price: 6000 },
+      { zh: "炒咖哩沙公", en: "Stir-fried Giant Mud Crab with Curry Sauce", price: 3880 },
+      { zh: "打拋葉炒婆參", en: "Stir-fried Sea Cucumber with Thai Holy Basil", price: 3800 },
+      { zh: "炒咖哩紅蟳", en: "Stir-fried Mud Crab with Curry Sauce", price: 1880 },
+      { zh: "炒咖哩海鮮", en: "Stir-fried Mixed Seafood with Curry Sauce", price: 1680 },
+      { zh: "泰式椒鹽明蝦 (6隻)", en: "Stir-fried Prawns with Pepper & Salt (6pcs)", price: 1500 },
+      { zh: "泰式海鮮煎", en: "Thai Style Mixed Seafood Omelet", price: 1480 },
+      { zh: "辣椒膏炒明蝦 (4隻)", en: "Stir-fried Prawns with Sweet Chili Paste (4pcs)", price: 980 },
+      { zh: "泰式椒鹽肋眼", en: "Stir-fried U.S. Prime Rib-eye with Pepper & Salt", price: 960 },
+      { zh: "泰式打拋牛", en: "Stir-fried Beef with Thai Holy Basil", price: 880 },
+      { zh: "牛肉炒芥藍", en: "Stir-fried Chinese Kale and Beef", price: 800 },
+      { zh: "玉米炒蝦仁", en: "Stir-fried Corn with Shrimps", price: 800 },
+      { zh: "酸辣龍骨", en: "Pork Rib with Spicy and Sour Sauce", price: 800 },
+      { zh: "泰式打拋脆皮豬", en: "Stir-fried Crispy Pork with Thai Holy Basil", price: 680 },
+      { zh: "泰式打拋茄子肉 (豬)", en: "Stir-fried Minced Pork with Eggplant and Thai Holy Basil", price: 680 },
+      { zh: "蕃茄炒蛋", en: "Scrambled Eggs with Tomatoes", price: 600 },
+      { zh: "鮮蝦炒芥藍", en: "Stir-fried Chinese Kale and Shrimps", price: 580 },
+      { zh: "上湯娃娃菜", en: "Braised Baby Cabbage in Superior Broth", price: 580 },
+      { zh: "泰式打拋肉 (豬/雞)", en: "Stir-fried Minced Pork/Chicken with Thai Holy Basil", price: 500, options: { protein: ["豬 Pork", "雞 Chicken"] } },
+      { zh: "脆皮豬肉炒芥藍", en: "Stir-fried Chinese Kale and Crispy Pork", price: 500 },
+      { zh: "櫻花蝦炒綠花椰", en: "Stir-fried Broccoli with Sakura Shrimp", price: 480 },
+      { zh: "泰式炒空心菜", en: "Stir-fried Water Spinach", price: 380, options: { sauce: ["豆瓣醬 Bean Paste", "蝦醬 Shrimp Paste"] } },
+    ]
+  },
+  {
+    id: "rice",
+    zh: "飯/河粉",
+    en: "Rice / Noodle",
+    items: [
+      { zh: "龍蝦炒河粉", en: "Pad Thai with Lobster", price: 3880 },
+      { zh: "龍蝦炒麵", en: "Stir-fried Egg Noodles with Lobster", price: 3880 },
+      { zh: "泰式冬蔭炒飯", en: "Tom Yum Fried Rice", price: 680 },
+      { zh: "鳳梨炒飯", en: "Fried Rice with Pineapple", price: 580 },
+      { zh: "泰式炒河粉", en: "Pad Thai", price: 520 },
+      { zh: "泰式炒粿條", en: "Stir-fried Flat Rice Noodles in Dark Soy Sauce", price: 520 },
+    ]
+  },
+  {
+    id: "soup",
+    zh: "湯",
+    en: "Soup",
+    items: [
+      { zh: "泰式火鍋 (預訂)", en: "Thai Style Hot Pot - King Crab, Lobster, Mud Crab, Wagyu (Pre-order)", price: 0, marketPrice: true, preorder: true },
+      { zh: "泰式壽喜鍋", en: "Thai Style Suki", price: 1880, options: { protein: ["海鮮 Seafood", "牛肉 Beef"] } },
+      { zh: "泰式培根豬肉壽喜鍋", en: "Thai Style Suki (Pork Belly)", price: 1200 },
+      { zh: "特級冬蔭功酸辣明蝦清湯 (5隻)", en: "Thai & Thai Tom Yum Goong Clear (5pcs)", price: 1200 },
+      { zh: "泰式牛肉湯", en: "Thai Style Stewed Beef Soup", price: 800 },
+      { zh: "冬蔭功酸辣蝦湯 (6隻)", en: "Tom Yum Goong (6pcs)", price: 680, options: { style: ["濃 Original", "清 Clear"] } },
+      { zh: "古法椰子雞肉湯", en: "Chicken Broth with Galangal in Coconut Milk", price: 600 },
+      { zh: "竹笙蝦丸湯 (6顆)", en: "Bamboo Fungus Soup with Shrimp Balls (6pcs)", price: 600 },
+      { zh: "蔬菜肉丸湯 (6顆)", en: "Thai Vegetables Soup with Meat Balls (6pcs)", price: 600 },
+    ]
+  },
+  {
+    id: "dessert",
+    zh: "甜點",
+    en: "Dessert",
+    items: [
+      { zh: "七彩椰子綠豆糕 (預訂)", en: "Look Choop - Fruit-shaped Mung Beans (Pre-order)", price: 600, preorder: true },
+      { zh: "椰汁五色湯圓 (熱)", en: "Glutinous Rice Balls with Coconut Milk (Hot)", price: 200 },
+      { zh: "芋頭紫米露 (熱)", en: "Black Glutinous Rice with Taro and Coconut Milk (Hot)", price: 200 },
+      { zh: "摩摩喳喳 (冰)", en: "Bubur Cha Cha (Iced)", price: 200 },
+      { zh: "椰子牛奶軟凍 (冰)", en: "Lod Chong Dessert in Coconut Milk (Iced)", price: 180 },
+      { zh: "泰式千層糕 (4個)", en: "Thai Style Steamed Layer Rice Cake (4pcs)", price: 180 },
+      { zh: "南瓜布丁", en: "Thai Style Pumpkin Pudding", price: 180 },
+      { zh: "香椰布丁 (4個)", en: "Coconut Pudding with Water Chestnut (4pcs)", price: 180 },
+      { zh: "芋頭香椰燒 (4個)", en: "Thai Taro Coconut Pancake (4pcs)", price: 180 },
+    ]
+  },
+];
+
+// State
+const state = {
+  selections: {},  // key: "categoryId-itemIndex", value: { qty, size, options, basePrice, effectivePrice }
+};
+
+// Build category nav
+function buildNav() {
+  const nav = document.getElementById('categoryNav');
+  MENU_DATA.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.textContent = cat.zh;
+    btn.dataset.id = cat.id;
+    btn.addEventListener('click', () => {
+      document.getElementById(`cat-${cat.id}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    nav.appendChild(btn);
+  });
+}
+
+// Build menu
+function buildMenu() {
+  const container = document.getElementById('menuContainer');
+
+  MENU_DATA.forEach(cat => {
+    const section = document.createElement('section');
+    section.className = 'category';
+    section.id = `cat-${cat.id}`;
+
+    let html = `
+      <div class="category-title">
+        <h2>${cat.zh}</h2>
+        <span>${cat.en}</span>
+      </div>
+    `;
+
+    if (cat.note) {
+      html += `<div class="category-note">${cat.note}</div>`;
+    }
+
+    cat.items.forEach((item, idx) => {
+      const key = `${cat.id}-${idx}`;
+      const priceText = item.marketPrice ? '時價' : `$${item.price.toLocaleString()}`;
+      const preorderTag = item.preorder ? '<span class="preorder-badge">預訂</span>' : '';
+
+      html += `
+        <div class="menu-item" data-key="${key}" onclick="toggleItem('${key}')">
+          <input type="checkbox" id="cb-${key}">
+          <div class="check-box"></div>
+          <div class="item-info">
+            <div class="item-name-zh">${item.zh}${preorderTag}</div>
+            <div class="item-name-en">${item.en}</div>
+          </div>
+          <div class="item-price">${priceText}</div>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button onclick="changeQty('${key}', -1)">−</button>
+            <span class="qty-num" id="qty-${key}">1</span>
+            <button onclick="changeQty('${key}', 1)">+</button>
+          </div>
+        </div>
+      `;
+
+      // Options (curry size, protein, cooking method, etc.)
+      if (item.hasSize || item.options) {
+        html += `<div class="item-options" id="opts-${key}">`;
+
+        if (item.hasSize) {
+          html += `
+            <div class="option-group">
+              <label>份量：</label>
+              <span class="option-pill active" data-key="${key}" data-type="size" data-val="小份" data-price="${item.price}" onclick="selectOption(this)">小份 $${item.price}</span>
+              <span class="option-pill" data-key="${key}" data-type="size" data-val="大份" data-price="${item.price + 300}" onclick="selectOption(this)">大份 $${item.price + 300}</span>
+            </div>
+          `;
+        }
+
+        if (item.options) {
+          Object.entries(item.options).forEach(([type, values]) => {
+            const labels = { protein: '選擇：', cooking: '做法：', style: '湯底：', sauce: '醬料：' };
+            html += `<div class="option-group"><label>${labels[type] || ''}</label>`;
+            values.forEach((v, i) => {
+              html += `<span class="option-pill${i === 0 ? ' active' : ''}" data-key="${key}" data-type="${type}" data-val="${v}" onclick="selectOption(this)">${v}</span>`;
+            });
+            html += `</div>`;
+          });
+        }
+
+        html += `</div>`;
+      }
+
+      // Add subtle divider between items (except last)
+      if (idx < cat.items.length - 1) {
+        html += `<div class="divider"></div>`;
+      }
+    });
+
+    section.innerHTML = html;
+    container.appendChild(section);
+  });
+}
+
+function toggleItem(key) {
+  const el = document.querySelector(`.menu-item[data-key="${key}"]`);
+
+  if (state.selections[key]) {
+    delete state.selections[key];
+    el.classList.remove('selected');
+  } else {
+    const [catId, idx] = key.split('-');
+    const cat = MENU_DATA.find(c => c.id === catId);
+    const item = cat.items[parseInt(idx)];
+
+    state.selections[key] = {
+      qty: 1,
+      size: item.hasSize ? '小份' : null,
+      options: {},
+      basePrice: item.price,
+      effectivePrice: item.price,
+    };
+
+    // Set default options
+    if (item.options) {
+      Object.entries(item.options).forEach(([type, values]) => {
+        state.selections[key].options[type] = values[0];
+      });
+    }
+
+    el.classList.add('selected');
+    document.getElementById(`qty-${key}`).textContent = '1';
+  }
+
+  updateTotal();
+}
+
+function changeQty(key, delta) {
+  if (!state.selections[key]) return;
+  const sel = state.selections[key];
+  sel.qty = Math.max(1, Math.min(99, sel.qty + delta));
+  document.getElementById(`qty-${key}`).textContent = sel.qty;
+  updateTotal();
+}
+
+function selectOption(el) {
+  const key = el.dataset.key;
+  const type = el.dataset.type;
+  const val = el.dataset.val;
+
+  // Deselect siblings
+  el.parentElement.querySelectorAll('.option-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+
+  if (!state.selections[key]) return;
+
+  if (type === 'size') {
+    state.selections[key].size = val;
+    state.selections[key].effectivePrice = parseInt(el.dataset.price);
+  } else {
+    state.selections[key].options[type] = val;
+  }
+
+  updateTotal();
+}
+
+function updateTotal() {
+  let total = 0;
+  let count = 0;
+  let hasMarketPrice = false;
+
+  Object.entries(state.selections).forEach(([key, sel]) => {
+    const [catId, idx] = key.split('-');
+    const cat = MENU_DATA.find(c => c.id === catId);
+    const item = cat.items[parseInt(idx)];
+    count += sel.qty;
+    if (item.marketPrice) {
+      hasMarketPrice = true;
+    } else {
+      total += sel.effectivePrice * sel.qty;
+    }
+  });
+
+  document.getElementById('totalPrice').textContent = total.toLocaleString();
+  document.getElementById('itemCount').textContent = `已選 ${count} 項`;
+  document.getElementById('submitBtn').disabled = count === 0;
+}
+
+// Search
+document.getElementById('searchInput').addEventListener('input', function() {
+  const query = this.value.toLowerCase().trim();
+
+  MENU_DATA.forEach(cat => {
+    const section = document.getElementById(`cat-${cat.id}`);
+    let hasVisible = false;
+
+    cat.items.forEach((item, idx) => {
+      const key = `${cat.id}-${idx}`;
+      const el = section.querySelector(`.menu-item[data-key="${key}"]`);
+      const opts = document.getElementById(`opts-${key}`);
+
+      const match = !query ||
+        item.zh.toLowerCase().includes(query) ||
+        item.en.toLowerCase().includes(query);
+
+      if (el) {
+        el.classList.toggle('hidden', !match);
+        if (opts && !match) opts.classList.add('hidden');
+        else if (opts) opts.classList.remove('hidden');
+      }
+      if (match) hasVisible = true;
+    });
+
+    section.classList.toggle('hidden', !hasVisible);
+  });
+});
+
+// Scroll spy for nav
+function updateActiveNav() {
+  const scrollY = window.scrollY + 140;
+  let activeId = MENU_DATA[0].id;
+
+  MENU_DATA.forEach(cat => {
+    const el = document.getElementById(`cat-${cat.id}`);
+    if (el && el.offsetTop <= scrollY) {
+      activeId = cat.id;
+    }
+  });
+
+  document.querySelectorAll('.category-nav button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.id === activeId);
+    if (btn.dataset.id === activeId) {
+      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  });
+}
+
+window.addEventListener('scroll', updateActiveNav, { passive: true });
+
+// Build order summary text
+function buildOrderText() {
+  const lines = ['\u{1F37D} Thai & Thai \u8A02\u55AE\n'];
+  let total = 0;
+  let hasMarketPrice = false;
+
+  MENU_DATA.forEach(cat => {
+    const catItems = [];
+
+    cat.items.forEach((item, idx) => {
+      const key = `${cat.id}-${idx}`;
+      const sel = state.selections[key];
+      if (!sel) return;
+
+      // Build short English name (first few words)
+      const shortEn = item.en.split(' ').slice(0, 4).join(' ');
+      let line = `\u2022 ${item.zh} ${shortEn}`;
+
+      // Options
+      const optParts = [];
+      if (sel.size) {
+        optParts.push(sel.size);
+      }
+      Object.values(sel.options).forEach(v => optParts.push(v));
+      if (optParts.length) line += ` (${optParts.join(', ')})`;
+
+      if (sel.qty > 1) line += ` x${sel.qty}`;
+
+      if (item.marketPrice) {
+        line += ' - \u6642\u50F9';
+        hasMarketPrice = true;
+      } else {
+        const subtotal = sel.effectivePrice * sel.qty;
+        line += ` - $${subtotal.toLocaleString()}`;
+        total += subtotal;
+      }
+
+      catItems.push(line);
+    });
+
+    if (catItems.length) {
+      lines.push(`\u3010${cat.zh} ${cat.en}\u3011`);
+      catItems.forEach(l => lines.push(l));
+      lines.push('');
+    }
+  });
+
+  lines.push(`\u{1F4B0} \u5C0F\u8A08 Subtotal\uFF1A$${total.toLocaleString()}`);
+  if (hasMarketPrice) {
+    lines.push('(\u6642\u50F9\u54C1\u9805\u53E6\u8A08)');
+  }
+  lines.push('(\u53E6\u52A010%\u670D\u52D9\u8CBB +10% service charge)');
+
+  return lines.join('\n');
+}
+
+// LIFF init and submit
+async function initLiff() {
+  try {
+    await liff.init({ liffId: 'YOUR_LIFF_ID' }); // Replace with your LIFF ID
+  } catch (e) {
+    console.log('LIFF init failed, running in standalone mode');
+  }
+}
+
+document.getElementById('submitBtn').addEventListener('click', async () => {
+  const orderText = buildOrderText();
+
+  if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
+    try {
+      await liff.sendMessages([{ type: 'text', text: orderText }]);
+      liff.closeWindow();
+    } catch (e) {
+      fallbackSubmit(orderText);
+    }
+  } else {
+    fallbackSubmit(orderText);
+  }
+});
+
+function fallbackSubmit(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    alert('\u8A02\u55AE\u5DF2\u8907\u88FD\u5230\u526A\u8CBC\u7C3F\uFF01\nOrder copied to clipboard!\n\n\u8ACB\u8CBC\u4E0A\u50B3\u9001\u7D66\u5C0D\u65B9\u3002');
+  }).catch(() => {
+    prompt('\u8ACB\u8907\u88FD\u4EE5\u4E0B\u8A02\u55AE\u5167\u5BB9\uFF1A', text);
+  });
+}
+
+// Init
+buildNav();
+buildMenu();
+updateActiveNav();
+initLiff();
+</script>
+
+</body>
+</html>
